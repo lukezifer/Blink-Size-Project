@@ -1,0 +1,77 @@
+GCC       ?= avr-g++
+GDB       := avr-gdb
+OBJCOPY   := avr-objcopy
+OBJDUMP   := avr-objdump
+SIZE      := avr-size
+NM        := avr-nm
+DEMANGLE  := avr-c++filt
+ULTOOL    := avrdude
+
+SRCDIR    := src
+OBJDIR    := obj
+BINDIR    := bin
+
+SRCEND    ?= cpp
+EXECFILE  ?= app
+SRCFILES  := $(wildcard $(SRCDIR)/*.$(SRCEND))
+OBJECTS   := $(subst $(SRCDIR)/, $(OBJDIR)/, $(SRCFILES:.$(SRCEND)=.o))
+DEPENDS   := $(OBJECTS:.o=.d)
+
+OPTFLAG   ?= -O3
+BASEFLAGS ?= -std=c++14 -mmcu=atmega2560
+GCCFLAGS  := $(BASEFLAGS) $(OPTFLAG)
+LDFLAGS   := $(BASEFLAGS) -Wl,-Map,$(BINDIR)/$(EXECFILE).map
+NMFLAGS   := --numeric-sort --print-size
+
+.PHONY: all clean
+
+all: $(BINDIR)/$(EXECFILE).elf text
+-include $(DEPENDS)
+
+$(OBJDIR)/%.d: $(SRCDIR)/%.$(SRCEND)
+	mkdir -p $(@D)
+	@echo
+	@echo dependencies $<
+	$(GCC) -MM -MT "$@ $(patsubst %.d,%.o,$@)" -MF $@ $<
+
+$(OBJDIR)/%.o: $(SRCDIR)/%.$(SRCEND)
+	@echo
+	@echo compiling $<
+	$(GCC) $(GCCFLAGS) $(INCLUDE) -c $< -o $@
+
+$(BINDIR)/$(EXECFILE).elf: $(OBJECTS)
+	mkdir -p $(@D)
+	@echo
+	@echo linking $@
+	$(GCC) -o $@ $^ $(LDFLAGS)
+
+text: hex bin
+
+hex: $(BINDIR)/$(EXECFILE).hex
+
+bin: $(BINDIR)/$(EXECFILE).bin
+
+$(BINDIR)/%.hex: $(BINDIR)/%.elf
+	$(OBJCOPY) -j .text -j .data -O ihex $< $@
+	
+$(BINDIR)/%.bin: $(BINDIR)/%.elf
+	$(OBJCOPY) -j .text -j .data -O binary $< $@
+
+lst: $(BINDIR)/$(EXECFILE).lst
+
+$(BINDIR)/%.lst: $(BINDIR)/$(EXECFILE).elf
+	$(OBJDUMP) -h -S $< > $@
+
+info: $(BINDIR)/$(EXECFILE).elf
+	@echo
+	@echo info files $<
+	$(SIZE) -A -t $(BINDIR)/$(EXECFILE).elf > $(BINDIR)/$(EXECFILE)_size.txt
+	$(NM) $(NMFLAGS) $(BINDIR)/$(EXECFILE).elf > $(BINDIR)/$(EXECFILE)_nm.txt
+	$(NM) $(NMFLAGS) $(BINDIR)/$(EXECFILE).elf | $(DEMANGLE) > $(BINDIR)/$(EXECFILE)_cppfilt.txt
+
+clean:
+	$(RM) -r $(OBJDIR)
+	$(RM) -r $(BINDIR)
+
+upload: $(BINDIR)/$(EXECFILE).hex
+	$(ULTOOL) -c avrispmkII -p m2560 -U flash:w:$(BINDIR)/$(EXECFILE).hex -P /dev/ttyACM0 -b 115200 -D

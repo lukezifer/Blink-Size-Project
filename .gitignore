@@ -1,0 +1,9 @@
+#build/binaries/object files
+bin/
+obj/
+
+#sublime user-specifics
+Blink_Size_Project.sublime-workspace
+
+#linker script for now
+*.ld
