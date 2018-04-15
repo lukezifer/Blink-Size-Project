@@ -8,6 +8,6 @@ class Led
 public:
     Led();
 
-    void m_led_toggle();
+    void m_led_toggle() const;
 };
 #endif //__LED_H__
