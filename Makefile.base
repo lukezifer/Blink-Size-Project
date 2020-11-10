@@ -12,14 +12,18 @@ OBJDIR    := obj
 BINDIR    := bin
 
 SRCEND    ?= cpp
+ASMEND    ?= S
 EXECFILE  ?= app
 SRCFILES  := $(wildcard $(SRCDIR)/*.$(SRCEND))
+ASMFILES  := $(wildcard $(SRCDIR)/*.$(ASMEND))
 OBJECTS   := $(subst $(SRCDIR)/, $(OBJDIR)/, $(SRCFILES:.$(SRCEND)=.o))
+OBJECTS   := $(subst $(SRCDIR)/, $(OBJDIR)/, $(ASMFILES:.$(ASMEND)=.o))
 DEPENDS   := $(OBJECTS:.o=.d)
 
 OPTFLAG   ?= -O3
 BASEFLAGS ?= -std=c++14 -mmcu=atmega2560
 GCCFLAGS  := $(BASEFLAGS) $(OPTFLAG)
+ASMFLAGS  := -mmcu=atmega2560
 LDFLAGS   := $(BASEFLAGS) -Wl,-Map,$(BINDIR)/$(EXECFILE).map
 NMFLAGS   := --numeric-sort --print-size
 
@@ -34,10 +38,21 @@ $(OBJDIR)/%.d: $(SRCDIR)/%.$(SRCEND)
 	@echo dependencies $<
 	$(GCC) -MM -MT "$@ $(patsubst %.d,%.o,$@)" -MF $@ $<
 
+$(OBJDIR)/%.d: $(SRCDIR)/%.$(ASMEND)
+	mkdir -p $(@D)
+	@echo
+	@echo dependencies $<
+	$(GCC) -MM -MT "$@ $(patsubst %.d,%.o,$@)" -MF $@ $<
+
 $(OBJDIR)/%.o: $(SRCDIR)/%.$(SRCEND)
 	@echo
 	@echo compiling $<
 	$(GCC) $(GCCFLAGS) $(INCLUDE) -c $< -o $@
+
+$(OBJDIR)/%.o: $(SRCDIR)/%.$(ASMEND)
+	@echo
+	@echo compiling $<
+	$(GCC) $(GCCFLAGS) -c $< -o $@
 
 $(BINDIR)/$(EXECFILE).elf: $(OBJECTS)
 	mkdir -p $(@D)
@@ -68,6 +83,11 @@ info: $(BINDIR)/$(EXECFILE).elf
 	$(SIZE) -A -t $(BINDIR)/$(EXECFILE).elf > $(BINDIR)/$(EXECFILE)_size.txt
 	$(NM) $(NMFLAGS) $(BINDIR)/$(EXECFILE).elf > $(BINDIR)/$(EXECFILE)_nm.txt
 	$(NM) $(NMFLAGS) $(BINDIR)/$(EXECFILE).elf | $(DEMANGLE) > $(BINDIR)/$(EXECFILE)_cppfilt.txt
+
+dump: $(BINDIR)/$(EXECFILE).elf
+	@echo
+	@echo dump $<
+	$(OBJDUMP) -D $< > $(BINDIR)/output.S
 
 clean:
 	$(RM) -r $(OBJDIR)
