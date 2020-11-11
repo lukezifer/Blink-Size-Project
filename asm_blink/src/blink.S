@@ -1,12 +1,20 @@
+.equ DDRB, 0x04 ; memory mapped register
+.equ PORTB, 0x05 ; memory mapped register
+.equ PIN7, 0x07 ; LED Pin number
+
+
+.section .vectors
+__vectors:
+	jmp reset
+
 .global main
 main:
-	call led_init
 	call blink
 
-led_init:
-	sbi 0x4,7
-	cbi 0x5,7
-	ret
+reset:
+	sbi DDRB,PIN7 ; set DDRB to output at bit 7
+	cbi PORTB,PIN7; set LED off
+	call main
 
 wait:
 	ldi r18, 40
@@ -25,8 +33,8 @@ wait_inner:
 	ret
 
 blink:
-	sbi 0x5,7 ; turn LED on
+	sbi PORTB,PIN7 ; turn LED on
 	call wait
-	cbi 0x5,7 ; turn LED off
+	cbi PORTB,PIN7 ; turn LED off
 	call wait
 	rjmp blink
