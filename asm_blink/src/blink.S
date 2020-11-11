@@ -5,14 +5,6 @@ main:
 
 led_init:
 	sbi 0x4,7
-	sbi 0x5,7
-	ret
-
-led_on:
-	sbi 0x5,7
-	ret
-
-led_off:
 	cbi 0x5,7
 	ret
 
@@ -33,8 +25,8 @@ wait_inner:
 	ret
 
 blink:
-	call led_on
+	sbi 0x5,7 ; turn LED on
 	call wait
-	call led_off
+	cbi 0x5,7 ; turn LED off
 	call wait
 	rjmp blink
