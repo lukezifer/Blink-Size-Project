@@ -17,7 +17,7 @@ EXECFILE  ?= app
 SRCFILES  := $(wildcard $(SRCDIR)/*.$(SRCEND))
 ASMFILES  := $(wildcard $(SRCDIR)/*.$(ASMEND))
 OBJECTS   := $(subst $(SRCDIR)/, $(OBJDIR)/, $(SRCFILES:.$(SRCEND)=.o))
-OBJECTS   := $(subst $(SRCDIR)/, $(OBJDIR)/, $(ASMFILES:.$(ASMEND)=.o))
+OBJECTS   += $(subst $(SRCDIR)/, $(OBJDIR)/, $(ASMFILES:.$(ASMEND)=.o))
 DEPENDS   := $(OBJECTS:.o=.d)
 
 OPTFLAG   ?= -O3
